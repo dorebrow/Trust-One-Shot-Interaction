@@ -189,11 +189,11 @@ print("q: ", q)
 
 pi_p_full = pi_p_signal(alpha, p, q)
 
-pi_p_exp = exp_pi_p_signal(alpha, p, q, X)
+pi_p_exp = exp_pi_p_signal(alpha, p, q, X_Alice)
 
-exp_p = exp_vec(p, X)
+exp_p = exp_vec(p, X_Alice)
 
-y1 = exp_phi_vec(X, alpha, p, q, pi_p_full)
+y1 = exp_phi_vec(X_Bob, alpha, p, q, pi_p_full)
 bob_psi1 = psi(y1)
 choice_ind1 = bob_choice(bob_psi1)
 bob_util1 = util(bob_psi1, y1, choice_ind1)
@@ -206,7 +206,7 @@ print("Bob's choice: ", choice_ind1, "with label", N[choice_ind1])
 print("Bob's utility: ", bob_util1)
 print("Alice's utility: ", alice_util1)
 
-y2 = exp_phi_vec(X, alpha, p, q, pi_p_exp)
+y2 = exp_phi_vec(X_Bob, alpha, p, q, pi_p_exp)
 bob_psi2 = psi(y2)
 choice_ind2 = bob_choice(bob_psi2)
 bob_util2 = util(bob_psi2, y2, choice_ind2)
@@ -219,7 +219,7 @@ print("Bob's choice: ", choice_ind2, "with label", N[choice_ind2])
 print("Bob's utility: ", bob_util2)
 print("Alice's utility: ", alice_util2)
 
-bob_ind_index, bob_ind_util = bob_independent_opt_choice(q, X)
+bob_ind_index, bob_ind_util = bob_independent_opt_choice(q, X_Bob)
 print("\nBob's best choice independent of Alice: ", bob_ind_index, "with label", N[bob_ind_index], "and utility", bob_ind_util)
 print("\nQuality of Alice's recommendation when she sends full pi_p: ", bob_ind_util - bob_util1)
 print("Quality of Alice's recommendation when she sends exp pi_p: ", bob_ind_util - bob_util2)
