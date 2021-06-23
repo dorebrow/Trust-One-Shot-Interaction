@@ -1,6 +1,5 @@
 import random
 import cvxpy as cp
-import string
 
 
 #normalizes vector to values between 1 and 0 that sum to 1
@@ -139,19 +138,22 @@ def bob_independent_opt_choice(bob_q, rewards):
 
     return choice_index, bob_util
 
+#Generates player's perceived rewards
 def gen_approx_rewards(X, sig):
-    X_Alice = []
+    X_Player = []
 
     for i in range(0, len(X)):
-        X_Alice.append(random.gauss(mu=X[i], sigma=sig))
+        X_Player.append(random.gauss(mu=X[i], sigma=sig))
     
-    return X_Alice
+    return X_Player
 
+#Generates probability vector from rewards vector
 def gen_probs(X):
     temp_dist = []
     temp_dist = final_prob(X, sum(X))
 
     return temp_dist
+
 
 
 #arbitrary choices
