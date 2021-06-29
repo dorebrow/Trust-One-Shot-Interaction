@@ -1,5 +1,8 @@
 import random
 import cvxpy as cp
+import csv
+from scipy.stats import uniform 
+from scipy.stats import truncnorm
 
 
 #normalizes vector to values between 1 and 0 that sum to 1
@@ -129,21 +132,21 @@ def util(psi_vector, y, choice_index):
     return psi_vector[choice_index] * y[choice_index]
 
 #returns the choice Bob would have made without Alice's input
-def bob_independent_opt_choice(bob_q, rewards):
-    q_exp_vec = exp_vec(bob_q, rewards)
+def bob_independent_opt_choice(bob_q, player_rewards_vec, y):
+    q_exp_vec = exp_vec(bob_q, player_rewards_vec)
     bob_psi = psi(q_exp_vec)
     choice_index = bob_choice(bob_psi)
-    bob_util = q_exp_vec[choice_index]
-
+    bob_util = util(bob_psi, y, choice_index)
 
     return choice_index, bob_util
 
 #Generates player's perceived rewards
-def gen_approx_rewards(X, sig):
+def gen_approx_rewards(rewards_vec):
     X_Player = []
 
-    for i in range(0, len(X)):
-        X_Player.append(random.gauss(mu=X[i], sigma=sig))
+    for i in range(0, len(rewards_vec)):
+        approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
+        X_Player.append(approx_reward[0])
     
     return X_Player
 
@@ -154,8 +157,6 @@ def gen_probs(X):
 
     return temp_dist
 
-
-
 #arbitrary choices
 choices = [i for i in range (random.randint(2, 10))]
 N = [chr(ord('a')+number) for number in range(0, len(choices))]
@@ -164,15 +165,15 @@ n = len(N)
 print("Choices: ", N)
 
 #Real rewards of those choices
-X = [random.gauss(mu=5, sigma=1) for n in N]
+X = uniform.rvs(0, 10, size=n)
 true_dist = gen_probs(X)
 
 print("Rewards: ", X)
 print("True dist: ", true_dist, "\n")
 
-X_Alice = gen_approx_rewards(X, 1)
+X_Alice = gen_approx_rewards(X)
 print("Alice rewards: ", X_Alice)
-X_Bob = gen_approx_rewards(X, 1)
+X_Bob = gen_approx_rewards(X)
 print("Bob rewards: ", X_Bob, '\n')
 
 #Alice's prior
@@ -219,7 +220,10 @@ print("Bob's choice: ", choice_ind2, "with label", N[choice_ind2])
 print("Bob's utility: ", bob_util2)
 print("Alice's utility: ", alice_util2)
 
-bob_ind_index, bob_ind_util = bob_independent_opt_choice(q, X_Bob)
+#Captures Bob's regret
+y3 = exp_phi_vec(X_Bob, 0, p, q, pi_p_full)
+bob_ind_index, bob_ind_util = bob_independent_opt_choice(q, X_Bob, y3)
+
 print("\nBob's best choice independent of Alice: ", bob_ind_index, "with label", N[bob_ind_index], "and utility", bob_ind_util)
 print("\nQuality of Alice's recommendation when she sends full pi_p: ", bob_ind_util - bob_util1)
 print("Quality of Alice's recommendation when she sends exp pi_p: ", bob_ind_util - bob_util2)

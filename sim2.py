@@ -37,15 +37,10 @@ def pi_p_signal(bob_alpha, alice_p, bob_q, n):
     alpha_vec = [bob_alpha for i in range(n)]
     alt_vec = [1 - bob_alpha for i in range(n)]
 
-    #something is causing negative values in alice p or phi during some runs, making problem infeasible.
-    #only thing changed has been the prior belief calc, so probably need to adjust mean or std dev
-
     phi = cp.multiply(alpha_vec, pi_p) + cp.multiply(alt_vec,  bob_q)
     R = cp.kl_div(alice_p, phi)
-    #print("Alice p:", alice_p)
-    #print("phi: ", phi)
 
-    objective = cp.Minimize(sum(R))
+    objective = cp.Minimize(cp.sum(R))
 
     constraints = []
     for i in range(0, n):
@@ -55,8 +50,6 @@ def pi_p_signal(bob_alpha, alice_p, bob_q, n):
 
     prob = cp.Problem(objective, constraints)
     prob.solve()
-    #print(pi_p.value)
-    #print(prob.status)
     
     ans = []
     for i in pi_p.value:
@@ -72,7 +65,7 @@ def exp_pi_p_signal(alpha, alice_p, bob_q, rewards, n):
 
     R = (cp.multiply(alpha, exp_pi_p) + cp.multiply((1 - alpha), exp(bob_q, rewards)) - exp(alice_p, rewards))**2
 
-    objective = cp.Minimize(sum(R))
+    objective = cp.Minimize(cp.sum(R))
 
     constraints = []
     for i in range(0, n):
@@ -121,11 +114,11 @@ def util(psi_vector, y, choice_index):
     return psi_vector[choice_index] * y[choice_index]
 
 #returns the choice Bob would have made without Alice's input
-def bob_independent_opt_choice(bob_q, rewards_vec):
-    q_exp_vec = exp_vec(bob_q, rewards_vec)
+def bob_independent_opt_choice(bob_q, player_rewards_vec, y):
+    q_exp_vec = exp_vec(bob_q, player_rewards_vec)
     bob_psi = psi(q_exp_vec)
     choice_index = bob_choice(bob_psi)
-    bob_util = q_exp_vec[choice_index]
+    bob_util = util(bob_psi, y, choice_index)
 
     return choice_index, bob_util
 
@@ -146,9 +139,7 @@ def gen_probs(rewards_vec):
 
     return temp_dist
 
-#arbitrary choices
-#Average regret at Bob across 1000 iterations for each signal
-#fixed number of choices, check different values of alpha
+#Determines regret at Bob for each signal
 def regret_comparison_iterate(iterations, num_choices, alpha_val):
     bob_average_1 = 0
     bob_average_2 = 0
@@ -161,37 +152,28 @@ def regret_comparison_iterate(iterations, num_choices, alpha_val):
         n = len(N)
 
         #Real rewards of those choices
-        #Range of [0, 10]
         X = uniform.rvs(0, 10, size=n)
     
         for i in X:
             format(i, 'f')
-
-        print(X)
         
         true_dist = gen_probs(X)
         
         X_Alice = gen_approx_rewards(X)
         X_Bob = gen_approx_rewards(X)
 
-        print("X Alice: ", X_Alice)
-        print("X Bob: ", X_Bob, '\n')
-
-        #p and q not representative of the probability of a value occuring, but the probability that the outcome will be favorable
         #Alice's prior
         p = gen_probs(X_Alice)
 
         #Bob's prior
         q = gen_probs(X_Bob)
-        print("P: ", p)
-        print("Q: ", q, '\n')
 
         alpha = alpha_val
 
         pi_p_full = pi_p_signal(alpha, p, q, n)
 
-        #Used in Bob's best response
-        pi_p_exp = exp_pi_p_signal(alpha, p, q, X_Bob, n)
+        #exp_pi_p_signal solves P3 at Alice, so it should be solved using Alice's perceived rewards
+        pi_p_exp = exp_pi_p_signal(alpha, p, q, X_Alice, n)
 
         y1 = exp_phi_vec(X_Bob, alpha, p, q, pi_p_full)
         bob_psi1 = psi(y1)
@@ -204,9 +186,12 @@ def regret_comparison_iterate(iterations, num_choices, alpha_val):
         bob_util2 = util(bob_psi2, y2, choice_ind2)
 
         #Captures Bob's regret
-        bob_ind_index, bob_ind_util = bob_independent_opt_choice(q, X)
+        y3 = exp_phi_vec(X_Bob, 0, p, q, pi_p_full)
+        bob_ind_index, bob_ind_util = bob_independent_opt_choice(q, X_Bob, y3)
+
         #Bob's regret when Alice sends full pi_p
         bob_regret_1 = bob_ind_util - bob_util1
+
         #Bob's regret when Alice sends exp pi_p
         bob_regret_2 = bob_ind_util - bob_util2
 
@@ -225,7 +210,7 @@ alpha_list = [0.01, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.99]
 
 for val in alpha_list:
     print(val)
-    bob_avg_reg_full, bob_avg_reg_exp = regret_comparison_iterate(1, 10, val)
+    bob_avg_reg_full, bob_avg_reg_exp = regret_comparison_iterate(100, 10, val)
     bob_regret_full[str(val)] = bob_avg_reg_full
     bob_regret_exp[str(val)] = bob_avg_reg_exp
 
