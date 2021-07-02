@@ -4,6 +4,7 @@ import csv
 from scipy.stats import uniform 
 from scipy.stats import truncnorm
 
+
 #normalizes vector to values between 1 and 0 that sum to 1
 def final_prob(vec, tot):
     temp_vec = []
@@ -13,23 +14,6 @@ def final_prob(vec, tot):
         temp_vec[i] = vec[i]/tot
     
     return temp_vec
-
-#Generates player's perceived rewards
-def gen_approx_rewards(rewards_vec):
-    X_Player = []
-
-    for i in range(0, len(rewards_vec)):
-        approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
-        X_Player.append(approx_reward[0])
-    
-    return X_Player
-
-#Generates probability vector from rewards vector
-def gen_probs(X):
-    temp_dist = []
-    temp_dist = final_prob(X, sum(X))
-
-    return temp_dist
 
 #returns summed expected value vector
 def exp(dist, rewards):
@@ -66,7 +50,7 @@ def pi_p_signal(bob_alpha, alice_p, bob_q, n):
 
     prob = cp.Problem(objective, constraints)
     prob.solve()
-
+    
     ans = []
     for i in pi_p.value:
         ans.append(i)
@@ -74,14 +58,12 @@ def pi_p_signal(bob_alpha, alice_p, bob_q, n):
     return list(pi_p.value)
 
 #P3
-def exp_pi_p_signal(alpha, p, bob_q, rewards, n):
-    rewards_new = [1 for i in range(n)]
-
+def exp_pi_p_signal(alpha, alice_p, bob_q, rewards, n):
     pi_p = cp.Variable(n)
 
-    exp_pi_p = cp.multiply(pi_p, rewards_new)
+    exp_pi_p = cp.multiply(pi_p, rewards)
 
-    R = (cp.multiply(alpha, exp_pi_p) + cp.multiply((1 - alpha), exp(bob_q, rewards_new)) - exp(p, rewards_new))**2
+    R = (cp.multiply(alpha, exp_pi_p) + cp.multiply((1 - alpha), exp(bob_q, rewards)) - exp(alice_p, rewards))**2
 
     objective = cp.Minimize(cp.sum(R))
 
@@ -140,14 +122,31 @@ def bob_independent_opt_choice(bob_q, player_rewards_vec, y):
 
     return choice_index, bob_util
 
-#Calculates average regret at Bob for each possible signal sent by Alice
-#For some fixed number of choices and an array of possible alpha values
-#For some number of iterations
+#Generates player's perceived rewards
+def gen_approx_rewards(rewards_vec):
+    X_Player = []
+
+    for i in range(0, len(rewards_vec)):
+        approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
+        X_Player.append(approx_reward[0])
+    
+    return X_Player
+
+#Generates probability vector from rewards vector
+def gen_probs(rewards_vec):
+    temp_dist = []
+    temp_dist = final_prob(rewards_vec, sum(rewards_vec))
+
+    return temp_dist
+
+#Determines regret at Bob for each signal
 def regret_comparison_iterate(iterations, num_choices, alpha_val):
     bob_average_1 = 0
     bob_average_2 = 0
     bob_total_1 = 0
     bob_total_2 = 0
+    alpha_total_1 = 0
+    alpha_total_2 = 0
 
     for i in range(iterations):
         choices = [i for i in range(num_choices)]
@@ -175,6 +174,7 @@ def regret_comparison_iterate(iterations, num_choices, alpha_val):
 
         pi_p_full = pi_p_signal(alpha, p, q, n)
 
+        #exp_pi_p_signal solves P3 at Alice, so it should be solved using Alice's perceived rewards
         pi_p_exp = exp_pi_p_signal(alpha, p, q, X_Alice, n)
 
         y1 = exp_phi_vec(X_Bob, alpha, p, q, pi_p_full)
@@ -193,55 +193,63 @@ def regret_comparison_iterate(iterations, num_choices, alpha_val):
 
         #Bob's regret when Alice sends full pi_p
         bob_regret_1 = bob_ind_util - bob_util1
+
         #Bob's regret when Alice sends exp pi_p
         bob_regret_2 = bob_ind_util - bob_util2
+
+        alpha_prime_1 = update_alpha(alpha, bob_regret_1)
+        alpha_prime_2 = update_alpha(alpha, bob_regret_2)
 
         bob_total_1 += bob_regret_1
         bob_total_2 += bob_regret_2
 
+        alpha_total_1 += alpha_prime_1
+        alpha_total_2 += alpha_prime_2
+
     bob_average_1 = bob_total_1 / iterations
     bob_average_2 = bob_total_2 / iterations
+    
+    alpha_update_average_1 = alpha_total_1 / iterations
+    alpha_update_average_2 = alpha_total_2 / iterations
 
-    return bob_average_1, bob_average_2
+    return bob_average_1, bob_average_2, alpha_update_average_1, alpha_update_average_2
 
 
-def generate_regret_dicts(alpha_list):
+def generate_regret_trust_dicts(alpha_list):
     bob_regret_full = {}
     bob_regret_exp = {}
+    bob_alpha_full = {}
+    bob_alpha_exp = {}
 
     for val in alpha_list:
-        bob_avg_reg_full, bob_avg_reg_exp = regret_comparison_iterate(1000, 10, val)
+        print(val)
+        bob_avg_reg_full, bob_avg_reg_exp, bob_avg_alpha_full, bob_avg_alpha_exp = regret_comparison_iterate(1000, 10, val)
         bob_regret_full[str(val)] = bob_avg_reg_full
         bob_regret_exp[str(val)] = bob_avg_reg_exp
+        bob_alpha_full[str(val)] = bob_avg_alpha_full
+        bob_alpha_exp[str(val)] = bob_avg_alpha_exp
 
-    return bob_regret_full, bob_regret_exp
+    print("Bob reg full: ", bob_regret_full)
+    print("Bob reg exp: ", bob_regret_exp)
 
-
-#normalizes reward values to [0, 1]
-def normalize_rewards(rewards):
-    normalized_X = []
-    min_x = min(rewards)
-    max_x = max(rewards)
-
-    for reward in rewards:
-        norm_reward = (reward - min_x) / (max_x - min_x)
-        normalized_X.append(norm_reward)
-
-    return normalized_X
+    return bob_regret_full, bob_regret_exp, bob_alpha_full, bob_alpha_exp
 
 
 #Bob's update rule for alpha
 def update_alpha(alpha, regret):
-    new_alpha = float(alpha) * (1 - regret)
+    if regret > 0:
+        alpha_prime = alpha + ((0 - alpha) / 2)
+    elif regret < 0:
+        alpha_prime = alpha + ((1 - alpha) / 2)
+    else:
+        alpha_prime = alpha
 
-    if new_alpha < 0:
-        new_alpha = 0
-    elif new_alpha > 1:
-        new_alpha = 1
+    return alpha_prime
 
-    return new_alpha
+#maybe apply this step in the above iteration process?
+#then have an average alpha_prime?
 
-
+#don't think I need this
 def generate_updated_alpha_vals(regret_dict):
     new_alpha_vals = []
 
@@ -249,16 +257,17 @@ def generate_updated_alpha_vals(regret_dict):
     regrets = list(regret_dict.values())
 
     for i in range(0, len(alphas)):
-        new_alpha = update_alpha(alphas[i], regrets[i])
+        new_alpha = update_alpha(float(alphas[i]), float(regrets[i]))
         new_alpha_vals.append(new_alpha)
 
     return new_alpha_vals
 
 
 alpha_list = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99]
-bob_reg_full, bob_reg_exp = generate_regret_dicts(alpha_list)
+#alpha_list = [0.01, 0.99]
+bob_reg_full, bob_reg_exp, updated_alphas_full, updated_alphas_exp = generate_regret_trust_dicts(alpha_list)
 
-updated_alphas_full = generate_updated_alpha_vals(bob_reg_full)
-updated_alphas_exp = generate_updated_alpha_vals(bob_reg_exp)
+#updated_alphas_full = generate_updated_alpha_vals(bob_reg_full)
+#updated_alphas_exp = generate_updated_alpha_vals(bob_reg_exp)
 print("New alpha vals for full dist: ", updated_alphas_full)
 print("New alpha vals for exp", updated_alphas_exp)

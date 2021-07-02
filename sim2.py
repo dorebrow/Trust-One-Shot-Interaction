@@ -210,7 +210,7 @@ alpha_list = [0.01, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.99]
 
 for val in alpha_list:
     print(val)
-    bob_avg_reg_full, bob_avg_reg_exp = regret_comparison_iterate(100, 10, val)
+    bob_avg_reg_full, bob_avg_reg_exp = regret_comparison_iterate(1000, 10, val)
     bob_regret_full[str(val)] = bob_avg_reg_full
     bob_regret_exp[str(val)] = bob_avg_reg_exp
 
