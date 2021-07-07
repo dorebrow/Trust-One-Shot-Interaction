@@ -3,9 +3,9 @@ import cvxpy as cp
 import csv
 from scipy.stats import uniform 
 from scipy.stats import truncnorm
+import numpy as np
 
 
-#normalizes vector to values between 1 and 0 that sum to 1
 def final_prob(vec, tot):
     temp_vec = []
 
@@ -139,16 +139,25 @@ def bob_independent_opt_choice(bob_q, player_rewards_vec, y):
     bob_util = util(bob_psi, y, choice_index)
 
     return choice_index, bob_util
-
 #Generates player's perceived rewards
 def gen_approx_rewards(rewards_vec):
+    mu, sigma = 0, 1
+
     X_Player = []
 
     for i in range(0, len(rewards_vec)):
-        approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
-        X_Player.append(approx_reward[0])
-    
+        #approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
+        s = np.random.normal(mu, sigma, 1)
+        approx_reward =  rewards_vec[i] + s[0]
+
+        while rewards_vec[i] + s[0] < 0:
+            s = np.random.normal(mu, sigma, 1)
+            approx_reward =  rewards_vec[i] + s[0]
+
+        X_Player.append(approx_reward)
+
     return X_Player
+
 
 #Generates probability vector from rewards vector
 def gen_probs(X):

@@ -4,9 +4,11 @@ import csv
 from scipy.stats import uniform 
 from scipy.stats import truncnorm
 import pandas as pd
+import numpy as np
+import matplotlib
+matplotlib.use('WebAgg')
 import matplotlib.pyplot as plt
 
-#normalizes vector to values between 1 and 0 that sum to 1
 def final_prob(vec, tot):
     temp_vec = []
 
@@ -18,13 +20,24 @@ def final_prob(vec, tot):
 
 #Generates player's perceived rewards
 def gen_approx_rewards(rewards_vec):
+    mu, sigma = 0, 1
+
     X_Player = []
 
     for i in range(0, len(rewards_vec)):
-        approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
-        X_Player.append(approx_reward[0])
+        #approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
+        s = np.random.normal(mu, sigma, 1)
+        approx_reward =  rewards_vec[i] + s[0]
+
+        while rewards_vec[i] + s[0] < 0:
+            s = np.random.normal(mu, sigma, 1)
+            approx_reward =  rewards_vec[i] + s[0]
+
+        X_Player.append(approx_reward)
     
     return X_Player
+
+
 
 #Generates probability vector from rewards vector
 def gen_probs(rewards_vec):
@@ -99,7 +112,7 @@ for i in range(0, len(alpha_vals)):
     print(alpha_vals[i])
     file_name = "kl_div_" + file_vals[i] + ".csv"
 
-    kl_divs = kl_div_iterate(100, alpha_vals[i])
+    kl_divs = kl_div_iterate(1000, alpha_vals[i])
 
     with open(file_name, mode='w') as csv_file:
         fieldnames = ['KL_Divergence']
@@ -158,7 +171,9 @@ print(mean_dict)
 keys = list(mean_dict.keys())
 values = list(mean_dict.values())
 
-plt.bar(keys, values)
-plt.xlabel(r'$\alpha$')
-plt.ylabel(r'KL Divergence between $\pi_p(x)$ and $p(x)$')
-plt.savefig('kl_div_new.png')
+fig, ax = plt.subplots()
+ax.plot(keys, values, marker = 'o')
+ax.set_xlabel(r'$\alpha$', fontsize=16)  # Add an x-label to the axes.
+ax.set_ylabel('KL Divergence', fontsize=16)  # Add a y-label to the axes.
+ax.tick_params(axis='both', which='major', labelsize=12)
+plt.show()

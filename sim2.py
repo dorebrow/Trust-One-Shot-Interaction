@@ -1,11 +1,12 @@
 import random
 import cvxpy as cp
-import csv
+import numpy as np
 from scipy.stats import uniform 
-from scipy.stats import truncnorm
+import matplotlib
+matplotlib.use('WebAgg')
+import matplotlib.pyplot as plt
 
 
-#normalizes vector to values between 1 and 0 that sum to 1
 def final_prob(vec, tot):
     temp_vec = []
 
@@ -122,15 +123,26 @@ def bob_independent_opt_choice(bob_q, player_rewards_vec, y):
 
     return choice_index, bob_util
 
+
 #Generates player's perceived rewards
 def gen_approx_rewards(rewards_vec):
+    mu, sigma = 0, 1
+
     X_Player = []
 
     for i in range(0, len(rewards_vec)):
-        approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
-        X_Player.append(approx_reward[0])
-    
+        #approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
+        s = np.random.normal(mu, sigma, 1)
+        approx_reward =  rewards_vec[i] + s[0]
+
+        while rewards_vec[i] + s[0] < 0:
+            s = np.random.normal(mu, sigma, 1)
+            approx_reward =  rewards_vec[i] + s[0]
+
+        X_Player.append(approx_reward)
+
     return X_Player
+
 
 #Generates probability vector from rewards vector
 def gen_probs(rewards_vec):
@@ -207,6 +219,7 @@ bob_regret_full = {}
 bob_regret_exp = {}
 
 alpha_list = [0.01, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.99]
+#alpha_list = [0.01]
 
 for val in alpha_list:
     print(val)
@@ -216,4 +229,14 @@ for val in alpha_list:
 
 print("Bob's regret when Alice sends full distribution: ", bob_regret_full)
 print("Bob's regret when Alice sends expectation: ", bob_regret_exp)
+
+fig, ax = plt.subplots()
+ax.plot(list(bob_regret_full.keys()),list(bob_regret_full.values()), label=r'$\pi_p(x)$', marker = 'o')
+ax.plot(list(bob_regret_exp.keys()), list(bob_regret_exp.values()), label=r'$\mathbb{E}_{\pi_p}(x)$', marker = 'o')
+ax.set_xlabel(r'$\alpha$', fontsize=16)  # Add an x-label to the axes.
+ax.set_ylabel('Bob\'s Regret', fontsize=16)  # Add a y-label to the axes.
+ax.tick_params(axis='both', which='major', labelsize=12)
+ax.legend(prop={"size":14})
+plt.axhline(0, color='black')
+plt.show()
 

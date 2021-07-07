@@ -1,11 +1,12 @@
 import random
 import cvxpy as cp
-import csv
+import numpy as np
 from scipy.stats import uniform 
 from scipy.stats import truncnorm
+import matplotlib
+matplotlib.use('WebAgg')
+import matplotlib.pyplot as plt
 
-
-#normalizes vector to values between 1 and 0 that sum to 1
 def final_prob(vec, tot):
     temp_vec = []
 
@@ -122,15 +123,27 @@ def bob_independent_opt_choice(bob_q, player_rewards_vec, y):
 
     return choice_index, bob_util
 
+
 #Generates player's perceived rewards
 def gen_approx_rewards(rewards_vec):
+    mu, sigma = 0, 1
+
     X_Player = []
 
     for i in range(0, len(rewards_vec)):
-        approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
-        X_Player.append(approx_reward[0])
-    
+        #approx_reward = truncnorm.rvs(a=0, b=10, scale = 1, loc = rewards_vec[i], size=1)
+        s = np.random.normal(mu, sigma, 1)
+        approx_reward =  rewards_vec[i] + s[0]
+
+        while rewards_vec[i] + s[0] < 0:
+            s = np.random.normal(mu, sigma, 1)
+            approx_reward =  rewards_vec[i] + s[0]
+
+        X_Player.append(approx_reward)
+        
     return X_Player
+
+
 
 #Generates probability vector from rewards vector
 def gen_probs(rewards_vec):
@@ -246,28 +259,18 @@ def update_alpha(alpha, regret):
 
     return alpha_prime
 
-#maybe apply this step in the above iteration process?
-#then have an average alpha_prime?
-
-#don't think I need this
-def generate_updated_alpha_vals(regret_dict):
-    new_alpha_vals = []
-
-    alphas = list(regret_dict.keys())
-    regrets = list(regret_dict.values())
-
-    for i in range(0, len(alphas)):
-        new_alpha = update_alpha(float(alphas[i]), float(regrets[i]))
-        new_alpha_vals.append(new_alpha)
-
-    return new_alpha_vals
-
-
 alpha_list = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99]
-#alpha_list = [0.01, 0.99]
+
 bob_reg_full, bob_reg_exp, updated_alphas_full, updated_alphas_exp = generate_regret_trust_dicts(alpha_list)
 
-#updated_alphas_full = generate_updated_alpha_vals(bob_reg_full)
-#updated_alphas_exp = generate_updated_alpha_vals(bob_reg_exp)
 print("New alpha vals for full dist: ", updated_alphas_full)
 print("New alpha vals for exp", updated_alphas_exp)
+
+fig, ax = plt.subplots()
+ax.plot(list(updated_alphas_full.keys()),list(updated_alphas_full.values()), color = '#1f77b4', label=r'$\pi_p(x)$', marker = 'o')
+ax.plot(list(updated_alphas_exp.keys()), list(updated_alphas_exp.values()), color = 'orange', label=r'$\mathbb{E}_{\pi_p}(x)$', marker = 'o')
+ax.set_xlabel(r'$\alpha$', fontsize=16)  # Add an x-label to the axes.
+ax.set_ylabel(r'$\alpha^\prime$', fontsize=16)  # Add a y-label to the axes.
+ax.tick_params(axis='both', which='major', labelsize=12)
+ax.legend(prop={"size":14})
+plt.show()

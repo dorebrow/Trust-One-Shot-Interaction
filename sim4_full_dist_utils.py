@@ -4,7 +4,7 @@ import csv
 from scipy.stats import uniform 
 from scipy.stats import truncnorm
 
-#normalizes vector to values between 1 and 0 that sum to 1
+
 def final_prob(vec, tot):
     temp_vec = []
 

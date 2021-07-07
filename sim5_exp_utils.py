@@ -4,7 +4,6 @@ import csv
 from scipy.stats import uniform 
 from scipy.stats import truncnorm
 
-#normalizes vector to values between 1 and 0 that sum to 1
 def final_prob(vec, tot):
     temp_vec = []
 
@@ -130,8 +129,6 @@ def full_dist_util_iterate(iterations, num_choices):
         #Bob's prior
         q = gen_probs(X_Bob)
 
-
-        #alpha = random.uniform(0,1)
         alpha = 0.5
 
         pi_p_exp = exp_pi_p_signal(alpha, p, q, X_Alice, n)
