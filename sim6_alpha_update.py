@@ -153,7 +153,7 @@ def gen_probs(rewards_vec):
     return temp_dist
 
 #Determines regret at Bob for each signal
-def regret_comparison_iterate(iterations, num_choices, alpha_val):
+def regret_comparison_iterate(iterations, num_choices, alpha_val, epsilon):
     bob_average_1 = 0
     bob_average_2 = 0
     bob_total_1 = 0
@@ -210,8 +210,8 @@ def regret_comparison_iterate(iterations, num_choices, alpha_val):
         #Bob's regret when Alice sends exp pi_p
         bob_regret_2 = bob_ind_util - bob_util2
 
-        alpha_prime_1 = update_alpha(alpha, bob_regret_1)
-        alpha_prime_2 = update_alpha(alpha, bob_regret_2)
+        alpha_prime_1 = update_alpha(alpha, bob_regret_1, epsilon)
+        alpha_prime_2 = update_alpha(alpha, bob_regret_2, epsilon)
 
         bob_total_1 += bob_regret_1
         bob_total_2 += bob_regret_2
@@ -228,7 +228,7 @@ def regret_comparison_iterate(iterations, num_choices, alpha_val):
     return bob_average_1, bob_average_2, alpha_update_average_1, alpha_update_average_2
 
 
-def generate_regret_trust_dicts(alpha_list):
+def generate_regret_trust_dicts(alpha_list, epsilon):
     bob_regret_full = {}
     bob_regret_exp = {}
     bob_alpha_full = {}
@@ -236,7 +236,7 @@ def generate_regret_trust_dicts(alpha_list):
 
     for val in alpha_list:
         print(val)
-        bob_avg_reg_full, bob_avg_reg_exp, bob_avg_alpha_full, bob_avg_alpha_exp = regret_comparison_iterate(1000, 10, val)
+        bob_avg_reg_full, bob_avg_reg_exp, bob_avg_alpha_full, bob_avg_alpha_exp = regret_comparison_iterate(500, 10, val, epsilon)
         bob_regret_full[str(val)] = bob_avg_reg_full
         bob_regret_exp[str(val)] = bob_avg_reg_exp
         bob_alpha_full[str(val)] = bob_avg_alpha_full
@@ -249,19 +249,25 @@ def generate_regret_trust_dicts(alpha_list):
 
 
 #Bob's update rule for alpha
-def update_alpha(alpha, regret):
-    if regret > 0:
-        alpha_prime = alpha + ((0 - alpha) / 2)
-    elif regret < 0:
-        alpha_prime = alpha + ((1 - alpha) / 2)
+def update_alpha(alpha, regret, epsilon):
+    reg_list = [regret]
+    reg_sign = np.sign(reg_list)[0]
+
+    alpha_prime = alpha - (epsilon * reg_sign)
+
+    if alpha_prime > 1:
+        alpha_prime = 1
+    elif alpha_prime < 0:
+        alpha_prime = 0
     else:
-        alpha_prime = alpha
+        return alpha_prime
 
     return alpha_prime
 
 alpha_list = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99]
+epsilon = 0.5
 
-bob_reg_full, bob_reg_exp, updated_alphas_full, updated_alphas_exp = generate_regret_trust_dicts(alpha_list)
+bob_reg_full, bob_reg_exp, updated_alphas_full, updated_alphas_exp = generate_regret_trust_dicts(alpha_list, epsilon)
 
 print("New alpha vals for full dist: ", updated_alphas_full)
 print("New alpha vals for exp", updated_alphas_exp)
