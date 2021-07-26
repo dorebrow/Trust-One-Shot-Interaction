@@ -114,12 +114,16 @@ def bob_choice(psi_vector):
 def util(psi_vector, y, choice_index):
     return psi_vector[choice_index] * y[choice_index]
 
+#def util_2(rewards, choice_index):
+#    return rewards[choice_index]
+
 #returns the choice Bob would have made without Alice's input
-def bob_independent_opt_choice(bob_q, player_rewards_vec, y):
+def bob_independent_opt_choice(bob_q, player_rewards_vec, y, true_rewards):
     q_exp_vec = exp_vec(bob_q, player_rewards_vec)
     bob_psi = psi(q_exp_vec)
     choice_index = bob_choice(bob_psi)
     bob_util = util(bob_psi, y, choice_index)
+    #bob_util = util_2(true_rewards, choice_index)
 
     return choice_index, bob_util
 
@@ -190,16 +194,18 @@ def regret_comparison_iterate(iterations, num_choices, alpha_val):
         y1 = exp_phi_vec(X_Bob, alpha, p, q, pi_p_full)
         bob_psi1 = psi(y1)
         choice_ind1 = bob_choice(bob_psi1)
-        bob_util1 = util(bob_psi1, y1, choice_ind1)
+        #bob_util1 = util(bob_psi1, y1, choice_ind1)
+        bob_util1 = util_2(X, choice_ind1)
 
         y2 = exp_phi_vec(X_Bob, alpha, p, q, pi_p_exp)
         bob_psi2 = psi(y2)
         choice_ind2 = bob_choice(bob_psi2)
         bob_util2 = util(bob_psi2, y2, choice_ind2)
-
+        #bob_util2 = util_2(X, choice_ind2)
+        
         #Captures Bob's regret
         y3 = exp_phi_vec(X_Bob, 0, p, q, pi_p_full)
-        bob_ind_index, bob_ind_util = bob_independent_opt_choice(q, X_Bob, y3)
+        bob_ind_index, bob_ind_util = bob_independent_opt_choice(q, X_Bob, y3, X)
 
         #Bob's regret when Alice sends full pi_p
         bob_regret_1 = bob_ind_util - bob_util1
@@ -219,7 +225,6 @@ bob_regret_full = {}
 bob_regret_exp = {}
 
 alpha_list = [0.01, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.99]
-#alpha_list = [0.01]
 
 for val in alpha_list:
     print(val)
